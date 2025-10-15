@@ -1,1 +1,224 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Challenge — Clean Tracker</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="icons/icon-72.svg" type="image/svg+xml">
+  <meta name="theme-color" content="#071227">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600,800&display=swap" rel="stylesheet">
+  <style>
+    body{margin:0;font-family:Inter,system-ui,-apple-system,'Segoe UI',Roboto,'Helvetica Neue',Arial;background:linear-gradient(180deg,#020617,#071227);color:#e6eef8}
+    .wrap{max-width:1000px;margin:20px auto;padding:18px}
+    header{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+    h1{margin:0}
+    .muted{color:#9aa7bd;font-size:13px}
+    .card{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));padding:14px;border-radius:12px;border:1px solid rgba(255,255,255,0.03)}
+    .progress{height:12px;background:rgba(255,255,255,0.04);border-radius:999px;overflow:hidden;margin-top:8px}
+    .bar{height:100%;background:linear-gradient(90deg,#60a5fa,#7dd3fc);width:0}
+    .controls{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
+    .btn{background:linear-gradient(90deg,#60a5fa,#7dd3fc);border:0;padding:8px 12px;border-radius:10px;color:#03212a;font-weight:600;cursor:pointer}
+    .btn.ghost{background:transparent;border:1px solid rgba(255,255,255,0.06);color:#9aa7bd}
+    .timeline{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
+    .dot{width:12px;height:12px;border-radius:50%}
+    .dot.clean{background:#10b981}
+    .dot.not{background:#f97316}
+    .dot.empty{background:rgba(255,255,255,0.04)}
+    .history{margin-top:12px;max-height:320px;overflow:auto;padding-right:6px}
+    .entry{display:flex;align-items:flex-start;gap:10px;padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.02);margin-bottom:8px;background:linear-gradient(180deg, rgba(0,0,0,0.02), transparent)}
+    label{display:block;margin-top:8px;color:#9aa7bd}
+    input,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.04);background:transparent;color:inherit}
+    .small{font-size:13px;color:#9aa7bd}
+    a{color:inherit;text-decoration:none}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div>
+        <a href="home.html"><button class="btn ghost">← Back</button></a>
+        <h1 id="title">Challenge</h1>
+        <div class="small" id="meta"></div>
+      </div>
+      <div>
+        <button class="btn" id="exportBtn">Export</button>
+        <button class="btn ghost" id="importBtn">Import</button>
+      </div>
+    </header>
+
+    <div class="card" style="margin-top:12px">
+      <div class="muted">Progress</div>
+      <div class="progress"><div id="progressBar" class="bar"></div></div>
+      <div style="display:flex;gap:12px;margin-top:8px;flex-wrap:wrap">
+        <div class="small">Clean: <strong id="cleanNum">0</strong></div>
+        <div class="small">Not: <strong id="notNum">0</strong></div>
+        <div class="small">Remaining: <strong id="remainingNum">0</strong></div>
+      </div>
+
+      <div class="controls">
+        <button class="btn" id="markCleanBtn">Mark Today Clean</button>
+        <button class="btn ghost" id="markNotBtn">Mark Not Clean</button>
+        <button class="btn ghost" id="exportDataBtn">Export Data</button>
+        <button class="btn ghost" id="clearBtn">Clear Entries</button>
+      </div>
+
+      <div style="margin-top:12px">
+        <div class="muted">Timeline</div>
+        <div id="timeline" class="timeline"></div>
+      </div>
+
+      <div style="margin-top:12px">
+        <div class="muted">History</div>
+        <div id="history" class="history"></div>
+      </div>
+
+      <div style="margin-top:12px">
+        <label>Quick note for today (optional)</label>
+        <input id="todayNote" placeholder="Reason or note (optional)">
+        <div style="display:flex;gap:8px;margin-top:8px">
+          <button class="btn" id="saveNoteBtn">Save Note (attach to today)</button>
+          <button class="btn ghost" id="toggleEditBtn">Edit entries</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+/* Challenge page logic */
+const KEY = 'ct_challenges_v1';
+function load(){ try{return JSON.parse(localStorage.getItem(KEY))||{challenges:{}}}catch(e){return {challenges:{}}} }
+function save(s){ localStorage.setItem(KEY, JSON.stringify(s)); }
+function qs(name){ const u = new URL(location.href); return u.searchParams.get(name); }
+function todayISO(d=new Date()){ return d.toISOString().slice(0,10); }
+function escapeHtml(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+const id = qs('id');
+if(!id){ alert('No challenge id provided.'); location.href='home.html'; }
+
+let state = load();
+let challenge = state.challenges && state.challenges[id];
+if(!challenge){ alert('Challenge not found.'); location.href='home.html'; }
+
+document.getElementById('title').textContent = challenge.name;
+document.getElementById('meta').textContent = `Start: ${challenge.startDate} • ${challenge.days} days`;
+
+function getEntries(){ return challenge.entries || {}; }
+function saveChallenge(){ state.challenges[id]=challenge; save(state); }
+
+function recalcAndRender(){
+  const entries = getEntries();
+  const keys = Object.keys(entries).sort();
+  const clean = keys.filter(k=>entries[k].type==='clean').length;
+  const not = keys.filter(k=>entries[k].type==='not').length;
+  const done = clean;
+  const remaining = Math.max(0, challenge.days - done);
+  const pct = Math.round(Math.min(100, (done / challenge.days) * 100 || 0));
+  document.getElementById('cleanNum').textContent = clean;
+  document.getElementById('notNum').textContent = not;
+  document.getElementById('remainingNum').textContent = remaining;
+  document.getElementById('progressBar').style.width = pct + '%';
+  renderTimeline();
+  renderHistory();
+}
+
+function renderTimeline(){
+  const timelineEl = document.getElementById('timeline'); timelineEl.innerHTML='';
+  const start = new Date(challenge.startDate + 'T00:00:00');
+  const entries = getEntries();
+  for(let i=0;i<challenge.days;i++){
+    const d = new Date(start); d.setDate(start.getDate() + i);
+    const iso = todayISO(d);
+    const e = entries[iso];
+    const dot = document.createElement('div'); dot.className = 'dot ' + (e? (e.type==='clean'?'clean':'not') : 'empty');
+    dot.title = iso + (e && e.note ? (' • ' + e.note) : '');
+    timelineEl.appendChild(dot);
+  }
+}
+
+function renderHistory(){
+  const hist = document.getElementById('history'); hist.innerHTML='';
+  const entries = getEntries();
+  const list = Object.keys(entries).sort((a,b)=> b.localeCompare(a));
+  if(list.length===0){ hist.innerHTML = '<div class="small">No entries yet.</div>'; return; }
+  list.forEach(d=>{
+    const e = entries[d];
+    const div = document.createElement('div'); div.className='entry';
+    div.innerHTML = `<div style="flex:1"><strong>${d}</strong><div class="small">${e.type==='clean'?'✅ Clean':'❌ Not'}</div><div style="margin-top:6px;color:#cfeaff">${escapeHtml(e.note||'')}</div></div>`;
+    const actions = document.createElement('div');
+    const editBtn = document.createElement('button'); editBtn.className='btn ghost'; editBtn.textContent='Edit';
+    editBtn.onclick = ()=> {
+      const newNote = prompt('Edit note for '+d, e.note || '');
+      const newType = prompt('Type (clean / not)', e.type);
+      if(newType && (newType==='clean' || newType==='not')){
+        e.type = newType;
+        e.note = newNote || '';
+        saveChallenge(); recalcAndRender();
+      } else alert('Invalid type. Use "clean" or "not".');
+    };
+    const delBtn = document.createElement('button'); delBtn.className='btn ghost'; delBtn.textContent='Delete';
+    delBtn.onclick = ()=>{ if(confirm('Delete entry for '+d+'?')){ delete entries[d]; saveChallenge(); recalcAndRender(); } };
+    actions.appendChild(editBtn); actions.appendChild(delBtn);
+    div.appendChild(actions);
+    hist.appendChild(div);
+  });
+}
+
+document.getElementById('markCleanBtn').addEventListener('click', ()=>{
+  const iso = todayISO();
+  const note = document.getElementById('todayNote').value.trim();
+  challenge.entries = challenge.entries || {};
+  challenge.entries[iso] = { type: 'clean', note: note };
+  saveChallenge(); recalcAndRender();
+  document.getElementById('todayNote').value = '';
+});
+document.getElementById('markNotBtn').addEventListener('click', ()=>{
+  const iso = todayISO();
+  const note = document.getElementById('todayNote').value.trim() || prompt('Reason (optional):') || '';
+  challenge.entries = challenge.entries || {};
+  challenge.entries[iso] = { type: 'not', note: note };
+  saveChallenge(); recalcAndRender();
+});
+
+document.getElementById('clearBtn').addEventListener('click', ()=>{
+  if(confirm('Clear ALL entries for this challenge?')){ challenge.entries = {}; saveChallenge(); recalcAndRender(); }
+});
+
+document.getElementById('exportBtn').addEventListener('click', ()=>{
+  const blob = new Blob([JSON.stringify(challenge, null, 2)], {type:'application/json'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download = (challenge.name || 'challenge') + '.json'; a.click(); URL.revokeObjectURL(a.href);
+});
+document.getElementById('exportDataBtn').addEventListener('click', ()=>document.getElementById('exportBtn').click());
+
+document.getElementById('importBtn').addEventListener('click', ()=>{
+  const inp = document.createElement('input'); inp.type='file'; inp.accept='application/json'; inp.onchange = e=>{
+    const f = e.target.files[0]; if(!f) return;
+    const r = new FileReader(); r.onload = ()=>{
+      try{
+        const parsed = JSON.parse(r.result);
+        if(parsed && parsed.id && parsed.days){
+          // Merge or replace entries
+          if(!challenge.entries) challenge.entries = {};
+          // merge entries
+          if(parsed.entries) Object.assign(challenge.entries, parsed.entries);
+          saveChallenge(); recalcAndRender(); alert('Import merged to current challenge.');
+        } else alert('Invalid challenge file.');
+      }catch(err){ alert('Failed to parse file'); }
+    }; r.readAsText(f);
+  }; inp.click();
+});
+
+document.getElementById('saveNoteBtn').addEventListener('click', ()=>{
+  const note = document.getElementById('todayNote').value.trim();
+  const iso = todayISO();
+  if(!challenge.entries) challenge.entries = {};
+  if(!challenge.entries[iso]) challenge.entries[iso] = { type: 'clean', note };
+  else challenge.entries[iso].note = note;
+  saveChallenge(); recalcAndRender();
+  document.getElementById('todayNote').value = '';
+});
+
+recalcAndRender();
+</script>
+</body>
+</html>
 
