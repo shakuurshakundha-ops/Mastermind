@@ -1,6 +1,8 @@
+
 {
-  "name": "82-Day Clean Tracker",
+  "name": "Custom Clean Tracker",
   "short_name": "CleanTracker",
+  "description": "Track your custom clean streak — daily, weekly, or any number of days you choose.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#0b1220",
