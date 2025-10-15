@@ -3,16 +3,13 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>82-Day Clean Tracker — Elegant Edition</title>
+  <title>Custom Clean Challenge Tracker</title>
 
-  <!-- PWA -->
   <link rel="manifest" href="manifest.json">
   <link rel="icon" href="icons/icon-72.svg" type="image/svg+xml">
-  <link rel="apple-touch-icon" href="icons/icon-192.svg">
   <meta name="theme-color" content="#071227">
-  <meta name="description" content="Track your 82-day clean streak — private, local, and offline-friendly.">
-
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
+
   <style>
     :root{
       --bg:#0b1220; --card:#071027; --glass:rgba(255,255,255,0.03);
@@ -27,353 +24,188 @@
     header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
     h1{margin:0;font-weight:800;letter-spacing:-0.5px}
     .subtitle{color:var(--muted);font-size:13px;margin-top:4px}
-
-    /* countdown */
-    .countdown-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:12px}
-    .tile{background:var(--glass);padding:12px;border-radius:12px;text-align:center}
-    .tile .value{font-size:26px;font-weight:700}
-    .tile .label{font-size:12px;color:var(--muted);margin-top:6px}
     .progress{height:12px;background:rgba(255,255,255,0.04);border-radius:999px;overflow:hidden;margin-top:12px}
     .bar{height:100%;width:0;background:var(--success-grad)}
-
-    /* controls */
-    .controls{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:14px}
-    .btn{background:var(--success-grad);border:0;padding:10px 12px;border-radius:10px;color:#03212a;font-weight:600;cursor:pointer}
-    .btn.ghost{background:transparent;border:1px solid rgba(255,255,255,0.04);color:var(--muted)}
-    .stat-row{display:flex;gap:14px;flex-wrap:wrap;margin-top:14px}
-    .stat{background:rgba(255,255,255,0.02);padding:10px;border-radius:12px;min-width:120px}
-    .stat .num{font-weight:700;font-size:18px}
     .muted{color:var(--muted);font-size:13px}
-
-    /* timeline */
+    .controls{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px}
+    .btn{background:var(--success-grad);border:0;padding:8px 14px;border-radius:10px;color:#03212a;font-weight:600;cursor:pointer}
+    .btn.ghost{background:transparent;border:1px solid rgba(255,255,255,0.04);color:var(--muted)}
+    .stat{background:rgba(255,255,255,0.02);padding:10px 12px;border-radius:12px;min-width:120px;margin-top:6px}
+    .stat .num{font-weight:700;font-size:18px}
     .timeline{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
     .dot{width:12px;height:12px;border-radius:50%}
     .dot.clean{background:var(--good)}
     .dot.not{background:var(--bad)}
     .dot.empty{background:rgba(255,255,255,0.04)}
-
-    /* history */
     .history{margin-top:12px;max-height:320px;overflow:auto;padding-right:6px}
     .entry{display:flex;align-items:flex-start;gap:10px;padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,0.02);margin-bottom:8px;background:linear-gradient(180deg, rgba(0,0,0,0.02), transparent)}
-    .entry .left{width:84px}
     .entry .date{font-weight:700}
     .entry .type{font-size:13px;color:var(--muted)}
-    .entry .note{white-space:pre-wrap;color:#cfeaff;font-size:14px}
-    .entry .actions{margin-left:auto;display:flex;flex-direction:column;gap:6px}
-    .small-btn{background:transparent;border:0;color:var(--muted);cursor:pointer}
-
-    /* modal */
-    .modal{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:linear-gradient(180deg, rgba(2,6,23,0.6), rgba(2,6,23,0.85))}
+    .modal{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(2,6,23,0.8)}
     .modal .sheet{background:#071227;padding:18px;border-radius:12px;width:420px}
-    input,textarea,select{width:100%;padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,0.04);background:transparent;color:inherit}
-    textarea{min-height:100px;resize:vertical}
-
-    /* responsive */
-    @media (max-width:980px){.grid{grid-template-columns:1fr}} 
+    input,select,textarea{width:100%;padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,0.04);background:transparent;color:inherit}
+    @media(max-width:900px){.grid{grid-template-columns:1fr}}
   </style>
 </head>
 <body>
   <div class="container">
+    <header>
+      <div>
+        <h1 id="challengeTitle">Custom Challenge Tracker</h1>
+        <div class="subtitle">Set your own challenge — daily, weekly, or any duration</div>
+      </div>
+      <button class="btn ghost" id="newChallenge">New Challenge</button>
+    </header>
+
     <div class="grid">
-
-      <!-- main column -->
+      <!-- Main Card -->
       <div class="card">
-        <header>
-          <div>
-            <h1>82-Day Clean Tracker</h1>
-            <div class="subtitle">Beautiful design • private local storage • review history & reasons</div>
-          </div>
-          <div style="text-align:right">
-            <div class="muted" id="now"></div>
-            <div class="muted" id="greeting"></div>
-          </div>
-        </header>
+        <div class="muted">Challenge Progress</div>
+        <div class="progress"><div class="bar" id="challengeBar"></div></div>
+        <div style="display:flex;gap:12px;margin-top:8px;flex-wrap:wrap">
+          <div class="muted">Completed: <strong id="completedCount">0</strong></div>
+          <div class="muted">Remaining: <strong id="remainingCount">0</strong></div>
+          <div class="muted">Success Rate: <strong id="successRate">0%</strong></div>
+        </div>
 
-        <section>
-          <div class="muted">Time remaining this year</div>
-          <div class="countdown-grid">
-            <div class="tile"><div class="value" id="days">0</div><div class="label">Days</div></div>
-            <div class="tile"><div class="value" id="hours">0</div><div class="label">Hours</div></div>
-            <div class="tile"><div class="value" id="minutes">0</div><div class="label">Minutes</div></div>
-            <div class="tile"><div class="value" id="seconds">0</div><div class="label">Seconds</div></div>
-          </div>
-          <div class="progress"><div class="bar" id="yearbar"></div></div>
-          <div style="display:flex;gap:12px;margin-top:8px;flex-wrap:wrap">
-            <div class="muted">Elapsed: <strong id="elapsedPercent">0%</strong></div>
-            <div class="muted">Days passed: <strong id="daysPassed">0</strong></div>
-            <div class="muted">Days remaining: <strong id="daysRemaining">0</strong></div>
-          </div>
-        </section>
+        <div class="controls">
+          <button class="btn" id="markClean">Mark Today Clean</button>
+          <button class="btn ghost" id="markNotClean">Mark Not Clean</button>
+        </div>
 
-        <hr style="border:none;height:1px;background:rgba(255,255,255,0.02);margin:18px 0;border-radius:2px">
+        <div class="muted" style="margin-top:12px">Timeline</div>
+        <div class="timeline" id="timeline"></div>
 
-        <section>
-          <div style="display:flex;align-items:center;justify-content:space-between">
-            <div>
-              <div class="muted">Mark today</div>
-              <div class="controls">
-                <button class="btn" id="markClean">Mark Today Clean</button>
-                <button class="btn ghost" id="markNotClean">Mark Today Not Clean</button>
-                <button class="btn ghost" id="openLog">Open History</button>
-              </div>
-            </div>
-            <div style="text-align:right">
-              <div class="muted">82-day goal progress</div>
-              <div class="stat-row">
-                <div class="stat"><div class="num" id="cleanCount">0</div><div class="muted">Clean days</div></div>
-                <div class="stat"><div class="num" id="notCleanCount">0</div><div class="muted">Not clean</div></div>
-                <div class="stat"><div class="num" id="remaining82">82</div><div class="muted">Remaining</div></div>
-              </div>
-            </div>
-          </div>
-
-          <div class="progress" style="margin-top:12px"><div class="bar" id="cleanBar"></div></div>
-
-          <div class="muted" style="margin-top:12px">Streak & insights</div>
-          <div style="display:flex;gap:12px;margin-top:8px;align-items:center;flex-wrap:wrap">
-            <div class="stat"><div class="num" id="currentStreak">0</div><div class="muted">Current streak</div></div>
-            <div class="stat"><div class="num" id="longestStreak">0</div><div class="muted">Longest streak</div></div>
-            <div class="stat"><div class="num" id="successRate">0%</div><div class="muted">Success rate</div></div>
-          </div>
-
-          <div class="muted" style="margin-top:12px">Recent 82-day timeline</div>
-          <div class="timeline" id="timeline"></div>
-
-        </section>
-
-        <section class="history card" style="margin-top:12px;">
-          <div class="muted">History & notes (most recent first)</div>
-          <div id="historyList" class="history"></div>
-          <div style="display:flex;gap:8px;margin-top:8px">
-            <button class="btn ghost" id="exportBtn">Export JSON</button>
-            <button class="btn ghost" id="importBtn">Import JSON</button>
-            <input type="file" id="fileInput" accept="application/json" style="display:none" />
-            <button class="btn ghost" id="clearAll">Clear All Data</button>
-          </div>
-        </section>
-
+        <div class="muted" style="margin-top:14px">History</div>
+        <div id="historyList" class="history"></div>
       </div>
 
-      <!-- right column -->
+      <!-- Tips -->
       <div class="card">
-        <div class="muted">Quick note for today</div>
-        <div style="margin-top:10px;display:flex;gap:8px;align-items:center">
-          <select id="todayType">
-            <option value="clean">Clean</option>
-            <option value="not">Not Clean</option>
-          </select>
-          <input id="noteInput" placeholder="Why was today not clean? (optional)" />
-          <button class="btn" id="saveToday">Save</button>
-        </div>
-
-        <div style="margin-top:18px">
-          <div class="muted">Last note</div>
-          <div id="lastNote" style="margin-top:8px;background:var(--glass);padding:10px;border-radius:8px;min-height:50px"></div>
-        </div>
-
-        <hr style="border:none;height:1px;background:rgba(255,255,255,0.02);margin:18px 0;border-radius:2px">
-        <div class="muted">Tips to stay clean</div>
-        <ul style="margin-top:8px;color:var(--muted);padding-left:18px">
-          <li>Fast when urges are strong.</li>
-          <li>Remove triggers and block websites/apps.</li>
-          <li>Replace habit: prayer, exercise, call a friend.</li>
-          <li>Record reasons — patterns reveal solutions.</li>
+        <div class="muted">Tips to stay strong</div>
+        <ul style="color:var(--muted);padding-left:20px;margin-top:8px">
+          <li>Start small — even 7 days can change habits.</li>
+          <li>Write your reason clearly before starting.</li>
+          <li>Track progress daily, even small wins.</li>
+          <li>Reflect weekly and adjust goals as needed.</li>
         </ul>
-
-        <div style="margin-top:18px;text-align:center" class="muted">Design: minimalist, mobile-friendly, private</div>
       </div>
-
     </div>
   </div>
 
-  <!-- modal -->
+  <!-- Modal for new challenge -->
   <div id="modal" class="modal">
     <div class="sheet">
-      <h3 style="margin-top:0">Edit entry</h3>
-      <div style="margin-top:8px">
-        <label class="muted">Date</label>
-        <input id="editDate" type="date" />
+      <h3>Start New Challenge</h3>
+      <label class="muted">Challenge name</label>
+      <input id="challengeName" placeholder="e.g. 30-Day Clean Challenge">
+
+      <label class="muted" style="margin-top:8px">Duration (days)</label>
+      <input id="challengeDays" type="number" min="1" max="365" value="30">
+
+      <div class="controls" style="margin-top:10px">
+        <button class="btn" id="saveChallenge">Start</button>
+        <button class="btn ghost" id="cancelChallenge">Cancel</button>
       </div>
-      <div style="margin-top:8px">
-        <label class="muted">Type</label>
-        <select id="editType"><option value="clean">Clean</option><option value="not">Not Clean</option></select>
-      </div>
-      <div style="margin-top:8px">
-        <label class="muted">Note</label>
-        <textarea id="editNote" placeholder="Optional reason for not clean"></textarea>
-      </div>
-      <div style="display:flex;gap:8px;margin-top:12px;justify-content:flex-end">
-        <button class="btn ghost" id="cancelEdit">Cancel</button>
-        <button class="btn" id="saveEdit">Save</button>
+
+      <div class="muted" style="margin-top:10px">Quick presets:</div>
+      <div class="controls">
+        <button class="btn ghost" onclick="setPreset(7)">7 days</button>
+        <button class="btn ghost" onclick="setPreset(30)">30 days</button>
+        <button class="btn ghost" onclick="setPreset(90)">90 days</button>
       </div>
     </div>
   </div>
 
 <script>
 (function(){
-  // Helpers
+  const STORAGE = 'custom_challenge_v1';
   const $ = id => document.getElementById(id);
-  const STORAGE = 'clean_tracker_pro_v1';
-  const GOAL = 82;
 
-  // Elements
-  const nowEl=$('now'), greeting=$('greeting');
-  const daysEl=$('days'), hoursEl=$('hours'), minutesEl=$('minutes'), secondsEl=$('seconds');
-  const yearbar=$('yearbar'), elapsedPercent=$('elapsedPercent'), daysPassed=$('daysPassed'), daysRemaining=$('daysRemaining');
+  let state = JSON.parse(localStorage.getItem(STORAGE) || '{"entries":{}}');
 
-  const markCleanBtn=$('markClean'), markNotBtn=$('markNotClean'), saveTodayBtn=$('saveToday');
-  const todayType=$('todayType'), noteInput=$('noteInput');
-  const cleanCountEl=$('cleanCount'), notCleanCountEl=$('notCleanCount'), remaining82El=$('remaining82');
-  const cleanBar=$('cleanBar'), timelineEl=$('timeline');
-  const historyList=$('historyList'), lastNoteEl=$('lastNote');
-  const currentStreakEl=$('currentStreak'), longestStreakEl=$('longestStreak'), successRateEl=$('successRate');
+  const timelineEl=$('timeline'), historyEl=$('historyList');
+  const completedCount=$('completedCount'), remainingCount=$('remainingCount'), successRate=$('successRate'), challengeBar=$('challengeBar'), challengeTitle=$('challengeTitle');
+  const modal=$('modal'), challengeName=$('challengeName'), challengeDays=$('challengeDays');
 
-  const modal=$('modal'), editDate=$('editDate'), editType=$('editType'), editNote=$('editNote');
-  let editingId = null;
+  function save(){localStorage.setItem(STORAGE, JSON.stringify(state));}
+  function todayISO(d=new Date()){return d.toISOString().slice(0,10);}
 
-  // date helpers
-  function todayISO(d=new Date()){return d.toISOString().slice(0,10);} 
-  function parseISO(s){return new Date(s+'T00:00:00');}
+  function setPreset(days){challengeDays.value=days;}
 
-  // storage
-  function load(){
-    try{ return JSON.parse(localStorage.getItem(STORAGE)||'{}'); }
-    catch(e){return {entries:{}}}
-  }
-  function save(state){ localStorage.setItem(STORAGE, JSON.stringify(state)); }
+  function refresh(){
+    const days = state.challengeDays || 0;
+    const entries = state.entries || {};
+    const totalDays = days || 1;
+    const cleanCount = Object.values(entries).filter(e=>e.type==='clean').length;
+    const notCount = Object.values(entries).filter(e=>e.type==='not').length;
+    const success = totalDays? Math.round((cleanCount/totalDays)*100) : 0;
 
-  function setGreeting(){
-    const h=new Date().getHours();
-    greeting.textContent = h<12? 'Good morning' : (h<18? 'Good afternoon' : 'Good evening');
-    nowEl.textContent = new Date().toLocaleString();
-  }
+    completedCount.textContent = cleanCount;
+    remainingCount.textContent = Math.max(0, totalDays - cleanCount);
+    successRate.textContent = success + '%';
+    challengeBar.style.width = Math.min(100, success) + '%';
+    challengeTitle.textContent = state.challengeName || "Custom Challenge";
 
-  // clock
-  function updateClock(){
-    const now=new Date();
-    const yearStart=new Date(now.getFullYear(),0,1,0,0,0,0);
-    const yearEnd=new Date(now.getFullYear(),11,31,23,59,59,999);
-    const total = yearEnd - yearStart;
-    const passed = now - yearStart;
-    const remaining = Math.max(0, yearEnd - now);
-    daysEl.textContent = Math.floor(remaining/(1000*60*60*24));
-    hoursEl.textContent = String(Math.floor((remaining%(1000*60*60*24))/(1000*60*60))).padStart(2,'0');
-    minutesEl.textContent = String(Math.floor((remaining%(1000*60*60))/(1000*60))).padStart(2,'0');
-    secondsEl.textContent = String(Math.floor((remaining%(1000*60))/1000)).padStart(2,'0');
-    const percent = Math.min(100, Math.round((passed/total)*100));
-    yearbar.style.width = percent+'%'; elapsedPercent.textContent = percent+'%';
-    daysPassed.textContent = Math.floor(passed/(1000*60*60*24)); daysRemaining.textContent = Math.floor(remaining/(1000*60*60*24));
-  }
-
-  // entries: stored as { entries: { '2025-10-10': {type:'clean'|'not', note: '...'}, ... } }
-  function getEntriesObj(){ return load().entries || {}; }
-  function entriesList(){ const obj = getEntriesObj(); return Object.keys(obj).sort((a,b)=> b.localeCompare(a)).map(d=> ({date:d, ...obj[d]})); }
-
-  function recalcStats(){
-    const obj = getEntriesObj();
-    const dates = Object.keys(obj).sort();
-    const cleanDates = dates.filter(d=>obj[d].type==='clean');
-    const notDates = dates.filter(d=>obj[d].type==='not');
-    cleanCountEl.textContent = cleanDates.length;
-    notCleanCountEl.textContent = notDates.length;
-    remaining82El.textContent = Math.max(0, GOAL - cleanDates.length);
-    const pct = Math.min(100, Math.round((cleanDates.length/GOAL)*100));
-    cleanBar.style.width = pct + '%';
-    successRateEl.textContent = dates.length? Math.round((cleanDates.length/dates.length)*100) + '%' : '0%';
-
-    // streaks — longest and current
-    const allDates = buildConsecutiveArray(dates);
-    let longest = 0, current = 0;
-    for(const d of allDates){
-      if(obj[d] && obj[d].type==='clean'){ current++; if(current>longest) longest=current; }
-      else current = 0;
-    }
-    // current streak from last day backwards
-    let streak = 0; for(let i=allDates.length-1;i>=0;i--){ const d=allDates[i]; if(obj[d] && obj[d].type==='clean') streak++; else break; }
-    currentStreakEl.textContent = streak; longestStreakEl.textContent = longest;
-  }
-
-  function buildConsecutiveArray(dates){
-    // If no dates recorded, create array of last GOAL days
-    if(!dates || dates.length===0){
-      const arr=[]; for(let i=GOAL-1;i>=0;i--){ const d=new Date(); d.setDate(d.getDate()-i); arr.push(todayISO(d)); } return arr;
-    }
-    // take from earliest recorded date up to today, but cap to last 365 days for performance
-    const earliest = dates.reduce((a,b)=> a<b? a:b);
-    const start = parseISO(earliest);
-    const end = new Date(); end.setHours(0,0,0,0,0);
-    const arr=[]; for(let d=new Date(start); d<=end; d.setDate(d.getDate()+1)){ arr.push(todayISO(new Date(d))); }
-    if(arr.length > GOAL*4){ return arr.slice(-GOAL*2); }
-    return arr;
+    renderTimeline();
+    renderHistory();
   }
 
   function renderTimeline(){
     timelineEl.innerHTML='';
-    // show last GOAL days
-    for(let i=GOAL-1;i>=0;i--){ const d=new Date(); d.setDate(d.getDate()-i); const s=todayISO(d); const obj = getEntriesObj()[s]; const dot=document.createElement('div'); dot.className='dot ' + (obj? (obj.type==='clean'?'clean':'not') : 'empty'); dot.title = s + (obj? (' • '+ obj.type + (obj.note ? (': '+obj.note) : '')) : ' • No entry'); timelineEl.appendChild(dot); }
+    const total = state.challengeDays || 30;
+    const entries = state.entries || {};
+    for(let i=0;i<total;i++){
+      const d = new Date(state.startDate || Date.now());
+      d.setDate(d.getDate()+i);
+      const iso = todayISO(d);
+      const entry = entries[iso];
+      const dot = document.createElement('div');
+      dot.className = 'dot ' + (entry? (entry.type==='clean'?'clean':'not') : 'empty');
+      dot.title = iso;
+      timelineEl.appendChild(dot);
+    }
   }
 
   function renderHistory(){
-    historyList.innerHTML='';
-    const list = entriesList();
-    if(list.length===0){ historyList.innerHTML = '<div class="muted">No entries yet — start by marking today.</div>'; return; }
-    list.forEach(item=>{
-      const div = document.createElement('div'); div.className='entry';
-      const left = document.createElement('div'); left.className='left'; left.innerHTML = '<div class="date">'+item.date+'</div><div class="type">'+(item.type==='clean'?'<span style="color:var(--good)">Clean</span>':'<span style="color:var(--bad)">Not Clean</span>')+'</div>';
-      const mid = document.createElement('div'); mid.style.flex='1'; mid.innerHTML = '<div class="note">'+(item.note?escapeHtml(item.note):'<span class="muted">(no note)</span>')+'</div>';
-      const actions = document.createElement('div'); actions.className='actions';
-      const edit = document.createElement('button'); edit.className='small-btn'; edit.textContent='Edit'; edit.onclick = ()=> openEdit(item.date);
-      const del = document.createElement('button'); del.className='small-btn'; del.textContent='Delete'; del.onclick = ()=>{ if(confirm('Delete entry for '+item.date+'?')){ removeEntry(item.date); }};
-      actions.appendChild(edit); actions.appendChild(del);
-      div.appendChild(left); div.appendChild(mid); div.appendChild(actions);
-      historyList.appendChild(div);
+    historyEl.innerHTML='';
+    const list = Object.keys(state.entries||{}).sort((a,b)=>b.localeCompare(a));
+    list.forEach(date=>{
+      const e = state.entries[date];
+      const div = document.createElement('div');
+      div.className='entry';
+      div.innerHTML = `<div><div class="date">${date}</div><div class="type">${e.type==='clean'?'✅ Clean':'❌ Not'}</div></div>`;
+      historyEl.appendChild(div);
     });
   }
 
-  function escapeHtml(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
-
-  function addEntry(date, type, note){
-    const state = load(); state.entries = state.entries || {}; state.entries[date] = { type: type, note: note || '' }; save(state); refreshAll();
+  function addEntry(type){
+    if(!state.challengeName){ alert('Please start a challenge first.'); return; }
+    const iso = todayISO();
+    state.entries = state.entries || {};
+    state.entries[iso] = { type };
+    save(); refresh();
   }
-  function removeEntry(date){ const state = load(); if(state.entries && state.entries[date]) delete state.entries[date]; save(state); refreshAll(); }
 
-  function openEdit(date){ const state = load(); const obj = (state.entries||{})[date] || {type:'clean',note:''}; editingId = date; modal.style.display='flex'; editDate.value = date; editType.value = obj.type; editNote.value = obj.note || ''; }
-  function closeEdit(){ editingId = null; modal.style.display='none'; }
-  function saveEdit(){ const d = editDate.value; if(!d){ alert('Please choose a date'); return; } const state = load(); state.entries = state.entries || {}; state.entries[d] = { type: editType.value, note: editNote.value.trim() }; if(editingId && editingId !== d){ if(state.entries[editingId]) delete state.entries[editingId]; } save(state); closeEdit(); refreshAll(); }
+  $('markClean').onclick = ()=>addEntry('clean');
+  $('markNotClean').onclick = ()=>addEntry('not');
 
-  // public actions
-  markCleanBtn.addEventListener('click', ()=>{ addEntry(todayISO(), 'clean', ''); lastNoteEl.textContent = ''; });
-  markNotBtn.addEventListener('click', ()=>{ const reason = prompt('Quick reason for not clean today (optional):'); addEntry(todayISO(), 'not', reason || ''); lastNoteEl.textContent = reason || ''; });
-  saveTodayBtn.addEventListener('click', ()=>{ addEntry(todayISO(), todayType.value, noteInput.value.trim()); lastNoteEl.textContent = noteInput.value.trim(); noteInput.value=''; });
+  $('newChallenge').onclick = ()=> modal.style.display='flex';
+  $('cancelChallenge').onclick = ()=> modal.style.display='none';
+  $('saveChallenge').onclick = ()=>{
+    state = {
+      challengeName: challengeName.value || "My Challenge",
+      challengeDays: parseInt(challengeDays.value) || 30,
+      startDate: todayISO(),
+      entries: {}
+    };
+    save();
+    modal.style.display='none';
+    refresh();
+  };
 
-  // modal actions
-  $('cancelEdit').addEventListener('click', closeEdit);
-  $('saveEdit').addEventListener('click', saveEdit);
-
-  // export/import/clear
-  $('exportBtn').addEventListener('click', ()=>{ const data = localStorage.getItem(STORAGE) || '{}'; const blob=new Blob([data],{type:'application/json'}); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='clean-tracker-export.json'; a.click(); URL.revokeObjectURL(url); });
-  $('importBtn').addEventListener('click', ()=>{ $('fileInput').click(); });
-  $('fileInput').addEventListener('change', (e)=>{ const f = e.target.files[0]; if(!f) return; const r = new FileReader(); r.onload = ()=>{ try{ const parsed = JSON.parse(r.result); if(parsed.entries){ localStorage.setItem(STORAGE, JSON.stringify(parsed)); refreshAll(); alert('Import successful'); } else alert('Invalid file'); }catch(err){ alert('Failed to parse file'); } }; r.readAsText(f); });
-  $('clearAll').addEventListener('click', ()=>{ if(confirm('Clear all tracker data? This cannot be undone.')){ localStorage.removeItem(STORAGE); refreshAll(); }});
-
-  function loadLastNote(){ const e = getEntriesObj(); lastNoteEl.textContent = e[todayISO()] ? (e[todayISO()].note || '(no note)') : '(no note)'; }
-
-  function refreshAll(){ renderTimeline(); renderHistory(); recalcStats(); loadLastNote(); }
-
-  // initial render
-  setGreeting(); updateClock(); setInterval(()=>{ setGreeting(); updateClock(); },1000);
-  renderTimeline(); renderHistory(); recalcStats(); loadLastNote();
-
+  refresh();
 })();
-</script>
-
-<script>
-// Register service worker for offline support (GitHub Pages compatible)
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('sw.js').then(() => console.log('Service worker registered.'));
-  });
-}
 </script>
 </body>
 </html>
