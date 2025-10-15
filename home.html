@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Clean Tracker — Home</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="icons/icon-72.svg" type="image/svg+xml">
+  <meta name="theme-color" content="#071227">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --bg:#0b1220; --card:#071227; --muted:#9aa7bd; --accent1:#60a5fa; --accent2:#7dd3fc;
+      --success-grad:linear-gradient(90deg,var(--accent1),var(--accent2));
+    }
+    *{box-sizing:border-box;font-family:Inter,system-ui,-apple-system,'Segoe UI',Roboto,'Helvetica Neue',Arial}
+    body{margin:0;min-height:100vh;background:linear-gradient(180deg,#020617,#071227);color:#e6eef8}
+    .wrap{max-width:1100px;margin:28px auto;padding:18px}
+    header{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+    h1{margin:0;font-weight:800}
+    .subtitle{color:var(--muted);font-size:13px}
+    .controls{display:flex;gap:8px}
+    .btn{background:var(--success-grad);border:0;padding:8px 12px;border-radius:10px;color:#03212a;font-weight:600;cursor:pointer}
+    .btn.ghost{background:transparent;border:1px solid rgba(255,255,255,0.06);color:var(--muted)}
+    .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px;margin-top:18px}
+    .card{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));padding:14px;border-radius:12px;border:1px solid rgba(255,255,255,0.03)}
+    .card h3{margin:0 0 6px 0;font-size:18px}
+    .muted{color:var(--muted);font-size:13px}
+    .progress{height:10px;background:rgba(255,255,255,0.04);border-radius:999px;overflow:hidden;margin-top:8px}
+    .bar{height:100%;width:0;background:var(--success-grad)}
+    .card .meta{display:flex;gap:8px;align-items:center;margin-top:8px;flex-wrap:wrap}
+    .small{font-size:12px;color:var(--muted)}
+    .empty{color:var(--muted);padding:18px;text-align:center}
+    .actions{display:flex;gap:8px;margin-top:10px}
+    a { color: inherit; text-decoration: none; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div>
+        <h1>Clean Tracker</h1>
+        <div class="subtitle">Overview — your challenges (local only)</div>
+      </div>
+      <div class="controls">
+        <a href="add.html"><button class="btn">+ New Challenge</button></a>
+        <button class="btn ghost" id="importAllBtn">Import</button>
+        <button class="btn ghost" id="exportAllBtn">Export</button>
+      </div>
+    </header>
+
+    <main>
+      <div id="cards" class="grid"></div>
+      <div id="empty" class="empty" style="display:none">No challenges yet — create one to start tracking.</div>
+    </main>
+  </div>
+
+<script>
+/*
+ Storage schema:
+ localStorage key: 'ct_challenges_v1'
+ Value: { challenges: { id1: {id, name, days, startDate, description, entries: { 'YYYY-MM-DD': {type:'clean'|'not', note:''} } }, ... } }
+*/
+const KEY = 'ct_challenges_v1';
+function loadState(){ try{return JSON.parse(localStorage.getItem(KEY)) || {challenges:{}}}catch(e){return {challenges:{}}} }
+function saveState(s){ localStorage.setItem(KEY, JSON.stringify(s)); }
+
+function uid(){ return 'c_' + Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
+
+function formatDate(iso){ return iso; }
+
+function render(){
+  const state = loadState();
+  const cards = document.getElementById('cards');
+  cards.innerHTML = '';
+  const ids = Object.keys(state.challenges).sort((a,b)=> state.challenges[b].startDate.localeCompare(state.challenges[a].startDate));
+  if(ids.length === 0){ document.getElementById('empty').style.display='block'; return; }
+  document.getElementById('empty').style.display='none';
+  ids.forEach(id=>{
+    const c = state.challenges[id];
+    const card = document.createElement('div'); card.className='card';
+    const lead = document.createElement('div');
+    lead.innerHTML = `<h3>${escapeHtml(c.name)}</h3><div class="small">Start: ${formatDate(c.startDate)} • ${c.days} days</div>`;
+    const entries = c.entries || {};
+    const cleanCount = Object.values(entries).filter(e=>e.type==='clean').length;
+    const pct = Math.round(Math.min(100,(cleanCount / c.days) * 100));
+    const progress = document.createElement('div'); progress.className='progress'; progress.innerHTML = `<div class="bar" style="width:${pct}%"></div>`;
+    const meta = document.createElement('div'); meta.className='meta';
+    meta.innerHTML = `<div class="small">Done: ${cleanCount}</div><div class="small">Remaining: ${Math.max(0,c.days-cleanCount)}</div><div class="small">Success: ${isNaN(pct)?0:pct}%</div>`;
+    const actions = document.createElement('div'); actions.className='actions';
+    const viewA = document.createElement('a'); viewA.href = `challenge.html?id=${encodeURIComponent(id)}`; viewA.innerHTML = `<button class="btn">View</button>`;
+    const delBtn = document.createElement('button'); delBtn.className='btn ghost'; delBtn.textContent='Delete';
+    delBtn.onclick = ()=>{ if(confirm('Delete challenge "'+c.name+'"?')){ delete state.challenges[id]; saveState(state); render(); } };
+    const exportBtn = document.createElement('button'); exportBtn.className='btn ghost'; exportBtn.textContent='Export';
+    exportBtn.onclick = ()=>{ const blob = new Blob([JSON.stringify(c, null, 2)],{type:'application/json'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download = (c.name||'challenge') + '.json'; a.click(); URL.revokeObjectURL(a.href); };
+    actions.appendChild(viewA); actions.appendChild(exportBtn); actions.appendChild(delBtn);
+
+    card.appendChild(lead); card.appendChild(progress); card.appendChild(meta); card.appendChild(actions);
+    cards.appendChild(card);
+  });
+}
+
+function escapeHtml(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+document.getElementById('exportAllBtn').addEventListener('click', ()=>{
+  const state=loadState(); const blob=new Blob([JSON.stringify(state, null, 2)],{type:'application/json'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='clean-tracker-all-challenges.json'; a.click(); URL.revokeObjectURL(a.href);
+});
+document.getElementById('importAllBtn').addEventListener('click', ()=>{
+  const inp = document.createElement('input'); inp.type='file'; inp.accept='application/json'; inp.onchange = e=>{
+    const f = e.target.files[0]; if(!f) return;
+    const r = new FileReader(); r.onload = ()=>{
+      try{
+        const parsed = JSON.parse(r.result);
+        if(parsed.challenges){
+          saveState(parsed); alert('Import successful'); render();
+        } else alert('Invalid file (expected full state)');
+      }catch(err){ alert('Failed to parse file'); }
+    }; r.readAsText(f);
+  }; inp.click();
+});
+
+render();
+
+// create sample quick button for testing if no challenges
+if(Object.keys(loadState().challenges).length===0){
+  // Add small helper to create demo challenge for testing if user wants
+  const demoBtn = document.createElement('button'); demoBtn.className='btn ghost'; demoBtn.textContent='Create demo challenge';
+  demoBtn.onclick = ()=>{
+    const id = uid();
+    const s = loadState();
+    s.challenges[id] = { id, name: 'Demo 14-day', days: 14, startDate: new Date().toISOString().slice(0,10), description: 'Demo', entries: {} };
+    saveState(s); render(); demoBtn.remove();
+  };
+  document.querySelector('.controls').appendChild(demoBtn);
+}
+</script>
+</body>
+</html>
