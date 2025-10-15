@@ -3,13 +3,11 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Custom Clean Challenge Tracker</title>
-
+  <title>Custom Clean Tracker — Manual Challenge</title>
   <link rel="manifest" href="manifest.json">
-  <link rel="icon" href="icons/icon-72.svg" type="image/svg+xml">
-  <meta name="theme-color" content="#071227">
+  <link rel="icon" href="icons/icon-72.svg">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
-
+  <meta name="theme-color" content="#071227">
   <style>
     :root{
       --bg:#0b1220; --card:#071027; --glass:rgba(255,255,255,0.03);
@@ -21,29 +19,26 @@
     .container{max-width:1100px;margin:36px auto;padding:28px}
     .grid{display:grid;grid-template-columns:1fr 420px;gap:20px}
     .card{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));border-radius:16px;padding:18px;box-shadow:0 8px 30px rgba(2,6,23,0.6);border:1px solid rgba(255,255,255,0.03)}
-    header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+    header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:10px}
     h1{margin:0;font-weight:800;letter-spacing:-0.5px}
     .subtitle{color:var(--muted);font-size:13px;margin-top:4px}
+    .btn{background:var(--success-grad);border:0;padding:8px 12px;border-radius:10px;color:#03212a;font-weight:600;cursor:pointer}
+    .btn.ghost{background:transparent;border:1px solid rgba(255,255,255,0.04);color:var(--muted)}
+    .muted{color:var(--muted);font-size:13px}
     .progress{height:12px;background:rgba(255,255,255,0.04);border-radius:999px;overflow:hidden;margin-top:12px}
     .bar{height:100%;width:0;background:var(--success-grad)}
-    .muted{color:var(--muted);font-size:13px}
-    .controls{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px}
-    .btn{background:var(--success-grad);border:0;padding:8px 14px;border-radius:10px;color:#03212a;font-weight:600;cursor:pointer}
-    .btn.ghost{background:transparent;border:1px solid rgba(255,255,255,0.04);color:var(--muted)}
-    .stat{background:rgba(255,255,255,0.02);padding:10px 12px;border-radius:12px;min-width:120px;margin-top:6px}
-    .stat .num{font-weight:700;font-size:18px}
     .timeline{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
     .dot{width:12px;height:12px;border-radius:50%}
     .dot.clean{background:var(--good)}
     .dot.not{background:var(--bad)}
     .dot.empty{background:rgba(255,255,255,0.04)}
+    .stat{background:rgba(255,255,255,0.02);padding:10px;border-radius:12px;min-width:120px;margin-top:8px}
+    .stat .num{font-weight:700;font-size:18px}
     .history{margin-top:12px;max-height:320px;overflow:auto;padding-right:6px}
     .entry{display:flex;align-items:flex-start;gap:10px;padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,0.02);margin-bottom:8px;background:linear-gradient(180deg, rgba(0,0,0,0.02), transparent)}
-    .entry .date{font-weight:700}
-    .entry .type{font-size:13px;color:var(--muted)}
-    .modal{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(2,6,23,0.8)}
-    .modal .sheet{background:#071227;padding:18px;border-radius:12px;width:420px}
-    input,select,textarea{width:100%;padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,0.04);background:transparent;color:inherit}
+    .modal{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(2,6,23,0.85)}
+    .sheet{background:#071227;padding:18px;border-radius:12px;width:360px}
+    input{width:100%;padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,0.04);background:transparent;color:inherit}
     @media(max-width:900px){.grid{grid-template-columns:1fr}}
   </style>
 </head>
@@ -51,160 +46,166 @@
   <div class="container">
     <header>
       <div>
-        <h1 id="challengeTitle">Custom Challenge Tracker</h1>
-        <div class="subtitle">Set your own challenge — daily, weekly, or any duration</div>
+        <h1 id="titleText">82-Day Clean Tracker</h1>
+        <div class="subtitle">Track your custom clean streak — daily, weekly, or any duration</div>
       </div>
-      <button class="btn ghost" id="newChallenge">New Challenge</button>
+      <button class="btn ghost" onclick="openSetChallenge()">Set Challenge</button>
     </header>
 
     <div class="grid">
-      <!-- Main Card -->
       <div class="card">
         <div class="muted">Challenge Progress</div>
-        <div class="progress"><div class="bar" id="challengeBar"></div></div>
+        <div class="progress"><div class="bar" id="cleanBar"></div></div>
         <div style="display:flex;gap:12px;margin-top:8px;flex-wrap:wrap">
-          <div class="muted">Completed: <strong id="completedCount">0</strong></div>
-          <div class="muted">Remaining: <strong id="remainingCount">0</strong></div>
-          <div class="muted">Success Rate: <strong id="successRate">0%</strong></div>
+          <div class="muted">Clean Days: <strong id="cleanCount">0</strong></div>
+          <div class="muted">Not Clean: <strong id="notCleanCount">0</strong></div>
+          <div class="muted">Remaining: <strong id="remaining82">82</strong></div>
+          <div class="muted">Goal: <strong id="goalText">82</strong> days</div>
         </div>
 
-        <div class="controls">
-          <button class="btn" id="markClean">Mark Today Clean</button>
-          <button class="btn ghost" id="markNotClean">Mark Not Clean</button>
-        </div>
-
-        <div class="muted" style="margin-top:12px">Timeline</div>
+        <div class="progress" style="margin-top:12px"><div class="bar" id="yearbar"></div></div>
+        <div class="muted" style="margin-top:8px">Timeline</div>
         <div class="timeline" id="timeline"></div>
 
-        <div class="muted" style="margin-top:14px">History</div>
+        <div class="muted" style="margin-top:12px">Streaks</div>
+        <div style="display:flex;gap:12px;margin-top:8px;flex-wrap:wrap">
+          <div class="stat"><div class="num" id="currentStreak">0</div><div class="muted">Current</div></div>
+          <div class="stat"><div class="num" id="longestStreak">0</div><div class="muted">Longest</div></div>
+          <div class="stat"><div class="num" id="successRate">0%</div><div class="muted">Success</div></div>
+        </div>
+
+        <div class="muted" style="margin-top:12px">History</div>
         <div id="historyList" class="history"></div>
+
+        <div style="display:flex;gap:10px;margin-top:10px;flex-wrap:wrap">
+          <button class="btn" id="markClean">Mark Clean</button>
+          <button class="btn ghost" id="markNotClean">Mark Not Clean</button>
+          <button class="btn ghost" id="clearAll">Clear Data</button>
+        </div>
       </div>
 
-      <!-- Tips -->
       <div class="card">
-        <div class="muted">Tips to stay strong</div>
-        <ul style="color:var(--muted);padding-left:20px;margin-top:8px">
-          <li>Start small — even 7 days can change habits.</li>
-          <li>Write your reason clearly before starting.</li>
-          <li>Track progress daily, even small wins.</li>
-          <li>Reflect weekly and adjust goals as needed.</li>
+        <div class="muted">Tips to stay consistent</div>
+        <ul style="color:var(--muted);padding-left:18px;margin-top:8px">
+          <li>Start small — even 7 days counts.</li>
+          <li>Write your reason before starting.</li>
+          <li>Check your progress daily.</li>
+          <li>Adjust your challenge duration anytime.</li>
         </ul>
       </div>
     </div>
   </div>
 
-  <!-- Modal for new challenge -->
-  <div id="modal" class="modal">
+  <!-- Modal for custom challenge -->
+  <div id="challengeModal" class="modal">
     <div class="sheet">
-      <h3>Start New Challenge</h3>
-      <label class="muted">Challenge name</label>
-      <input id="challengeName" placeholder="e.g. 30-Day Clean Challenge">
-
+      <h3>Set Custom Challenge</h3>
+      <label class="muted">Challenge Name</label>
+      <input id="challengeNameInput" placeholder="e.g. 30-Day Clean Challenge">
       <label class="muted" style="margin-top:8px">Duration (days)</label>
-      <input id="challengeDays" type="number" min="1" max="365" value="30">
-
-      <div class="controls" style="margin-top:10px">
-        <button class="btn" id="saveChallenge">Start</button>
-        <button class="btn ghost" id="cancelChallenge">Cancel</button>
-      </div>
-
-      <div class="muted" style="margin-top:10px">Quick presets:</div>
-      <div class="controls">
-        <button class="btn ghost" onclick="setPreset(7)">7 days</button>
-        <button class="btn ghost" onclick="setPreset(30)">30 days</button>
-        <button class="btn ghost" onclick="setPreset(90)">90 days</button>
+      <input id="challengeDaysInput" type="number" min="1" max="365" value="82">
+      <div style="display:flex;gap:8px;margin-top:12px;justify-content:flex-end">
+        <button class="btn ghost" onclick="closeChallenge()">Cancel</button>
+        <button class="btn" onclick="saveChallenge()">Save</button>
       </div>
     </div>
   </div>
 
 <script>
 (function(){
-  const STORAGE = 'custom_challenge_v1';
+  const STORAGE = 'clean_tracker_pro_v2';
   const $ = id => document.getElementById(id);
 
-  let state = JSON.parse(localStorage.getItem(STORAGE) || '{"entries":{}}');
+  // State variables
+  let GOAL = 82;
+  let challengeName = "82-Day Clean Tracker";
 
-  const timelineEl=$('timeline'), historyEl=$('historyList');
-  const completedCount=$('completedCount'), remainingCount=$('remainingCount'), successRate=$('successRate'), challengeBar=$('challengeBar'), challengeTitle=$('challengeTitle');
-  const modal=$('modal'), challengeName=$('challengeName'), challengeDays=$('challengeDays');
+  const state = JSON.parse(localStorage.getItem(STORAGE) || '{"entries":{}}');
+  if (state.goal) GOAL = state.goal;
+  if (state.name) challengeName = state.name;
 
-  function save(){localStorage.setItem(STORAGE, JSON.stringify(state));}
+  // Elements
+  const cleanCountEl=$('cleanCount'), notCleanCountEl=$('notCleanCount'), remaining82El=$('remaining82');
+  const cleanBar=$('cleanBar'), yearbar=$('yearbar');
+  const currentStreakEl=$('currentStreak'), longestStreakEl=$('longestStreak'), successRateEl=$('successRate');
+  const timelineEl=$('timeline'), historyList=$('historyList');
+  const goalText=$('goalText'), titleText=$('titleText');
+
   function todayISO(d=new Date()){return d.toISOString().slice(0,10);}
+  function parseISO(s){return new Date(s+'T00:00:00');}
+  function save(){localStorage.setItem(STORAGE, JSON.stringify(state));}
 
-  function setPreset(days){challengeDays.value=days;}
+  function getEntries(){return state.entries || {};}
+  function addEntry(type){
+    const iso=todayISO(); state.entries=state.entries||{};
+    state.entries[iso]={type}; save(); refreshAll();
+  }
 
-  function refresh(){
-    const days = state.challengeDays || 0;
-    const entries = state.entries || {};
-    const totalDays = days || 1;
-    const cleanCount = Object.values(entries).filter(e=>e.type==='clean').length;
-    const notCount = Object.values(entries).filter(e=>e.type==='not').length;
-    const success = totalDays? Math.round((cleanCount/totalDays)*100) : 0;
+  $('markClean').onclick=()=>addEntry('clean');
+  $('markNotClean').onclick=()=>addEntry('not');
+  $('clearAll').onclick=()=>{ if(confirm('Clear all data?')){ localStorage.removeItem(STORAGE); location.reload(); }};
 
-    completedCount.textContent = cleanCount;
-    remainingCount.textContent = Math.max(0, totalDays - cleanCount);
-    successRate.textContent = success + '%';
-    challengeBar.style.width = Math.min(100, success) + '%';
-    challengeTitle.textContent = state.challengeName || "Custom Challenge";
+  function recalcStats(){
+    const entries=getEntries(); const dates=Object.keys(entries).sort();
+    const cleanDates=dates.filter(d=>entries[d].type==='clean');
+    const notDates=dates.filter(d=>entries[d].type==='not');
+    cleanCountEl.textContent=cleanDates.length;
+    notCleanCountEl.textContent=notDates.length;
+    remaining82El.textContent=Math.max(0,GOAL-cleanDates.length);
+    goalText.textContent=GOAL;
+    titleText.textContent = challengeName || "Custom Clean Challenge";
 
-    renderTimeline();
-    renderHistory();
+    const pct=Math.min(100,Math.round((cleanDates.length/GOAL)*100));
+    cleanBar.style.width=pct+'%';
+    successRateEl.textContent=dates.length?Math.round((cleanDates.length/dates.length)*100)+'%':'0%';
+
+    // streak calc
+    const allDates=buildConsecutiveArray(dates);
+    let longest=0,current=0;
+    for(const d of allDates){if(entries[d]&&entries[d].type==='clean'){current++;if(current>longest)longest=current;}else current=0;}
+    let streak=0;for(let i=allDates.length-1;i>=0;i--){const d=allDates[i];if(entries[d]&&entries[d].type==='clean')streak++;else break;}
+    currentStreakEl.textContent=streak;longestStreakEl.textContent=longest;
+  }
+
+  function buildConsecutiveArray(dates){
+    const arr=[]; for(let i=GOAL-1;i>=0;i--){const d=new Date();d.setDate(d.getDate()-i);arr.push(todayISO(d));}
+    return arr;
   }
 
   function renderTimeline(){
-    timelineEl.innerHTML='';
-    const total = state.challengeDays || 30;
-    const entries = state.entries || {};
-    for(let i=0;i<total;i++){
-      const d = new Date(state.startDate || Date.now());
-      d.setDate(d.getDate()+i);
-      const iso = todayISO(d);
-      const entry = entries[iso];
-      const dot = document.createElement('div');
-      dot.className = 'dot ' + (entry? (entry.type==='clean'?'clean':'not') : 'empty');
-      dot.title = iso;
-      timelineEl.appendChild(dot);
-    }
+    timelineEl.innerHTML=''; const entries=getEntries();
+    for(let i=GOAL-1;i>=0;i--){const d=new Date();d.setDate(d.getDate()-i);const iso=todayISO(d);const obj=entries[iso];
+      const dot=document.createElement('div'); dot.className='dot '+(obj?(obj.type==='clean'?'clean':'not'):'empty'); dot.title=iso;
+      timelineEl.appendChild(dot);}
   }
 
   function renderHistory(){
-    historyEl.innerHTML='';
-    const list = Object.keys(state.entries||{}).sort((a,b)=>b.localeCompare(a));
-    list.forEach(date=>{
-      const e = state.entries[date];
-      const div = document.createElement('div');
-      div.className='entry';
-      div.innerHTML = `<div><div class="date">${date}</div><div class="type">${e.type==='clean'?'✅ Clean':'❌ Not'}</div></div>`;
-      historyEl.appendChild(div);
-    });
+    historyList.innerHTML=''; const entries=getEntries(); const list=Object.keys(entries).sort((a,b)=>b.localeCompare(a));
+    if(list.length===0){historyList.innerHTML='<div class="muted">No entries yet.</div>';return;}
+    list.forEach(d=>{const e=entries[d];const div=document.createElement('div');div.className='entry';div.innerHTML=`<div><div class="date">${d}</div><div class="type">${e.type==='clean'?'✅ Clean':'❌ Not Clean'}</div></div>`;historyList.appendChild(div);});
   }
 
-  function addEntry(type){
-    if(!state.challengeName){ alert('Please start a challenge first.'); return; }
-    const iso = todayISO();
-    state.entries = state.entries || {};
-    state.entries[iso] = { type };
-    save(); refresh();
+  function refreshAll(){renderTimeline();renderHistory();recalcStats();}
+  refreshAll();
+
+  // Challenge Modal Functions
+  window.openSetChallenge = function(){
+    $('challengeDaysInput').value=GOAL;
+    $('challengeNameInput').value=challengeName;
+    $('challengeModal').style.display='flex';
+  }
+  window.closeChallenge = function(){
+    $('challengeModal').style.display='none';
+  }
+  window.saveChallenge = function(){
+    const n=parseInt($('challengeDaysInput').value);
+    const name=$('challengeNameInput').value.trim()||'Custom Clean Challenge';
+    if(isNaN(n)||n<=0){alert('Enter a valid number');return;}
+    GOAL=n; challengeName=name;
+    state.goal=n; state.name=name; save(); closeChallenge(); refreshAll();
+    alert(`✅ Challenge set to "${name}" (${n} days)`);
   }
 
-  $('markClean').onclick = ()=>addEntry('clean');
-  $('markNotClean').onclick = ()=>addEntry('not');
-
-  $('newChallenge').onclick = ()=> modal.style.display='flex';
-  $('cancelChallenge').onclick = ()=> modal.style.display='none';
-  $('saveChallenge').onclick = ()=>{
-    state = {
-      challengeName: challengeName.value || "My Challenge",
-      challengeDays: parseInt(challengeDays.value) || 30,
-      startDate: todayISO(),
-      entries: {}
-    };
-    save();
-    modal.style.display='none';
-    refresh();
-  };
-
-  refresh();
 })();
 </script>
 </body>
